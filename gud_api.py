@@ -17,9 +17,7 @@ GUD_API_STUPID_IGNORE_ADMIN = False
 GUD_API_STARTING_PLAYER_DATA = 1000
 
 #TODO: $tipz
-#TODO: case independence
 #TODO: $rob command
-#TODO: github repo licensed under mit
 #TODO: program crashes if a colon is in the message
 #TODO: command queue
 
@@ -211,8 +209,12 @@ class Command:
     #|   |---hangman variables~~
     #|
     #|---god
+    #|   |
+    #|   |---god variables~~
+    #|
+    #|---player_data
     #    |
-    #    |---god variables~~
+    #    |---dict with player name keys and token values
     
     #TODO: explain custom state
 ################
