@@ -1,0 +1,28 @@
+{
+  "system": {
+    #where the cfg is
+    "cfg_path": "gud_api.cfg",
+    #where the log file is. MAKE SURE to #put '-condebug' in your launch parameters to make console.log work.
+    "log_path": "C:/Program Files (x86)/Steam/steamapps/common/JBMod/jbmod/console.log",
+    #how many recent console.log entries are saved when scanning for commands
+    "recent_lines_max": 16
+    #your steam name. used to prevent randos from restarting the python script
+    #"admin": "Backshot Betty #killtf2",
+    "admin": "Bartoid",
+    #"start_message": "gud_api is online. Type '$help' for a list of commands."
+    "start_message": "Command line test. Type '$help' for a list of commands.",
+    #if set to true, commands are inputted via the command line and gud_api does not interact with Source at all. if it is false, gud_api reads commands from console.log and interacts with Source.
+    "use_command_line": True
+  },
+  "player_data": {
+    #how many tokens a person starts out with
+    "starting_tokens": 1000
+  },
+  #dont change these unless you want to get HAXXED
+  "stupid": {
+    #lets randos put semicolons (they break api output, because they act as a command terminator) in their commands
+    "enable_rce": False,
+    #lets randos execute admin-only commands
+    "ignore_admin": False
+  }
+}

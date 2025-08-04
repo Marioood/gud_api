@@ -1,0 +1,11 @@
+{
+#http://burger.com/
+  "player_data": {
+    "id": ["name", "tokens", "kills", "deaths"],
+    "Backshot Betty #killtf2": ["name", 1, 2, 3]
+    "NotBart": ["n/a", 777, 666, 67]
+  },
+  "macro_data": {
+    "zombo": ["public", ["red", "green", "blue"], 'ent_create npc_zombie rendercolor \\"{red} {green} {blue}\\"']
+  }
+}

@@ -4,7 +4,9 @@ import subprocess
 import math
 import sys
 
-GUD_API_USER = "Backshot Betty #killtf2" #your steam name. used to prevent randos from restarting the python script
+import pydn
+
+GUD_API_USER = "DEPRECATED" #your steam name. used to prevent randos from restarting the python script
 GUD_API_TICK_DELAY = 400 #sync this with the blah blah alias thingie
 GUD_API_CFG_PATH = "gud_api.cfg" #where the cfg is
 GUD_API_DATA_PATH = "gud_api_player_data.txt" #where the data is
@@ -26,10 +28,24 @@ GUD_API_STARTING_PLAYER_DATA = 1000
 cfg = []
 cfg_write_count = 0
 
+def format_count(count, singular, plural = None):
+  if plural == None: plural = singular + "s"
+  
+  if count == 1:
+    return "{} {}".format(count, singular)
+  else:
+    return "{} {}".format(count, plural)
+    
+def rand_bool(chance = 2):
+  return random.randint(0, chance) == 0
+
 def cmd(text):
   if GUD_API_STUPID_RCE:
     cfg.append(text)
   else:
+    #text = text.replace(";", ":")
+    #cfg.append(text)
+  
     if ';' in text:
       cfg.append("say potential RCE attempt. semicolon found in command")
       print("say potential RCE attempt. semicolon found in command")
@@ -39,16 +55,22 @@ def cmd(text):
     else:
       cfg.append(text)
       
+      
 def cmd_unsafe(text):
   cfg.append(text)
   
 chang_mode = False
   
 def yap(text):
+  """text_bak = text
+  text = ""
+  for char in text_bak:
+    text += chr(ord(char) + 1)"""
+    
   if chang_mode:
     cmd("say chang " + text)
   else:
-    cmd("say " + text)
+    cmd('say "{}"'.format(text))
   
 def print_cfg():
   for cmd in cfg:
@@ -58,7 +80,7 @@ def export_cfg(type):
   global cfg
   global cfg_write_count
   
-  f = open(GUD_API_CFG_PATH, "w")
+  f = open(GUD_API_CFG_PATH, "w", encoding="utf-8")
   print("cfg contents:")
   
   try:
@@ -73,7 +95,7 @@ def export_cfg(type):
         f.write(txt)
         f.write('\n')
   except Exception as e:
-    open(GUD_API_CFG_PATH, "w").close()
+    open(GUD_API_CFG_PATH, "w", encoding="utf-8").close()
     cfg = []
     f.write("say failure in export_cfg(): {}".format(e)) # crash messages
     print("export_cfg() failed!")
@@ -88,7 +110,7 @@ def export_cfg(type):
   f.close()
 #status
 def parse_api_data(state):
-  f = open(GUD_API_DATA_PATH, "r")
+  f = open(GUD_API_DATA_PATH, "r", encoding="utf-8")
   lines = f.readlines()
   parsed = []
   player_data = {}
@@ -134,8 +156,8 @@ def parse_api_data(state):
       else:
         token_count = int(parsed_line[1])
         
-        
-      player_data[parsed_line[0]] = token_count
+      player_data[parsed_line[0]] = Player("n/a", parsed_line[0], token_count)
+      
     elif len(parsed_line) == 1:
       print("missing player data...")
     elif len(parsed_line) > 2:
@@ -146,10 +168,10 @@ def parse_api_data(state):
   print(parsed)
   print(player_data)
   
-  state.player_data = player_data
+  state.player_newdat = player_data
   
 def update_api_data_file(player_data):
-  f = open(GUD_API_DATA_PATH, "w")
+  f = open(GUD_API_DATA_PATH, "w", encoding="utf-8")
   print("player data contents:")
   
   try:
@@ -167,10 +189,58 @@ def update_api_data_file(player_data):
       
     f.close()
   except Exception as e:
-    open(GUD_API_DATA_PATH, "w").close()
+    open(GUD_API_DATA_PATH, "w", encoding="utf-8").close()
     cfg = []
     f.write("say failure in update_api_data_file(): {}".format(e)) # crash messages
     print("update_api_data_file() failed!")
+    
+  # print info
+  for pair in player_data.items():
+    print('  "{}" "{}"'.format(pair[0], pair[1]))
+    
+  print()
+  print("successfully wrote to " + GUD_API_DATA_PATH)
+  
+  
+def update_newdat(player_newdat):
+  #CLOSE FILES
+  #CLOSE FILES
+  #CLOSE FILES
+  #CLOSE FILES
+  #CLOSE FILES
+  #CLOSE FILES
+  #CLOSE FILES
+  #CLOSE FILES
+  #CLOSE FILES
+  #CLOSE FILES
+  #CLOSE FILES
+  #CLOSE FILES
+  #CLOSE FILES
+  #CLOSE FILES
+  #CLOSE FILES
+  #CLOSE FILES
+  f = open(GUD_API_DATA_PATH, "w", encoding="utf-8")
+  print("player newdata contents:")
+  
+  try:
+    f.write("#this file regenerates automatically\n")
+    f.write("#comments left in this file will not be saved\n\n")
+    
+    for pair in player_newdat.items():
+      player_name = pair[0]
+      player_name = player.replace('\\', '\\\\')
+      player_name = player.replace('"', '\\"')
+      player = pair[1]
+      
+      f.write('"{}" "{}" "{}" "{}"'.format(player_name, player.tokens, player.kills, player.deaths))
+      f.write('\n')
+      
+    f.close()
+  except Exception as e:
+    open(GUD_API_DATA_PATH, "w", encoding="utf-8").close()
+    cfg = []
+    f.write("say failure in update_newdat(): {}".format(e)) # crash messages
+    print("update_newdat() failed!")
     
   # print info
   for pair in player_data.items():
@@ -191,8 +261,8 @@ class HangmanManager:
 class GodManager:
   def __init__(self):
     #jumping is not a crime
-    self.words = ["beautiful","dirty","dirt","stone","rough","water","smooth","harsh","jade","gold","golden","plating","plate","plated","notched","carved","carving","chiseled","tile","button","jagged","porus","spongy","sponge","carpet","wall","floor","dull","shiny","special","clay","mud","sand","magma","lava","leaves","wood","bark","cloth","concrete","curtain","striped","flag","sign","pillar","column","linoleum","quartz","planks","screen","metal","iron","fur","plastic","tinny","tin","steel","marble","marbled","meat","meaty","slippery","red","orange","yellow","lime","green","blue","indigo","purple","magenta","black","pink","white","light","dark","grey","brown","rouge","lemon","sour","foul","awful","amazing","book","paper","leather","glass","glassy","wet","hot","cold","warm","lukewarm","rock","boulder","moss","mossy","abstract","geometric","artistic","algebraic","archaic","simple","crude","basic","cell","battery","tissue","outlet","screw","nail","iridescent","refractive","pearlescent","pearl","cracked","shattered","torn","worn","broken","java","script","cascading","style","sheet","hypertext","markup","language","powder","powdered","calculus","wave","tangent","square","root","gradient","papyrus","cactus","thorny","terrain","rocky","mountain","enormous","miniscule","firey","string","array","set","map","hash","hashed","text","textual","texture","generic","bland","obtuse","obsidian","geode","ruby","platform","sludge","random","procedural","predictable","c","ansi","plus","flower","bone","boned","ball","grass","weed","roof","shingles","cancer","glowing","glowy","glow","bitwise","fractal","recursive","insane","crazy","self","similar","structure","logical","assembly","low","level","with","flat","sprite","buffer","file","stream","memory","pixel","bottle","ur","heaven","bubble","bubbles","sequence","glitter","glittery","sparkles","sparkly","fancy","holy","temple","frutiger","aero","bar","bars","barred","wavy","null","void","pointer","flooring","machine","machinary","graph","mushroom","stalk","trunk","oak","pine","ghost","gum","table","brain","positive","negative","electron","electric","spark","glaze","wine","bread","skin","blood","lambda","foo","baz","jet","theta","pi","ceiling","tube","lamp","lantern","pattern","design","serpent","apple","software","abraham","angel","theology","cloud","edges","edge","blobs","border","noise","bort","phonks","bart","jb","jbmod","man","guy","relt","wawa","chang","charoid","reltoid","take","my","meds","fat","boy","big","money","william","banks","is","a","good","person","maluch","xenia","modification","api","cayama","slop","sloppy","sloppiest","girl","cock","slim","how","to","start","god","bless","usa","floppa","floppoid","pornist","penile","B==============D~~~~~~~~~~-----","little","steam","steamy","freak","freaky","bling","ping","pong","computer","processor","computation","global","local","logarithmic","exponential","in","or","out","commodore","64","amiga","atari","dictionary","complete","scrap","scrapped","scraps","scrapper","incomplete","abandoned","unfinished","finished","some","command","description","pounds","butter","honolulu","estrogen","glory","administrator","help","one","for","me","shit","nooo","no","yes","spave","malloc","hoy","edict","spungler","spoomler","sdoon","grout","ghoul","vivement","joyous","joyfil","joyful","joy","rtv","mind","mindwave","epstein","trump","glory to the administrator","one for me and one for me","sometimes i dream about cheese","dream","cheese","sometimes","about","clone","maw","maws","feet","foot","scratch","cat","hell","babble","babbler","pumpkin","works","dox","doxxed","angler","fish","fishie","ovh","ass","party","lmao","blacked","mr","those who know","those","who","know","inspect","radio","meet","meet me at the radio","port","dangdong","stressed","box","agartha","ufo","doubleplusungood","unwholesome","nineteen","eighty","four","strike","dolbab","doldad","dolbabian","spitish","suckfishes","purgatorian","relentlessnesses","vibe","code","dribble","crash","crasher","content","house","dead","mechanic","less","space","construct","construction","round","bunker","test","prop","props","hand","hands","soda","can","canned","pop","cola","coke","degenerate","faces","face","rebel","chat","generate","generative","boring","bored","bore","hole","hold","holes","chamber","chambered","chambers","charred","char","diddy","blud","ts","pmo","charisma","charismatic","chloroplast","eukaryote","prokaryote","cells","celled","trollimog","wafers","sneed","feed","seed","formerly","chuck","chick","sick","suck","haus","hl2world","world","hl2","animation","cycler"]
-    self.prefixes = ["jb","jb","jb","jb","jb","gm","gm","gm","de","jbdm","jbdm","jbdm","ttt","jbsm","phy","test","sdk"]
+    self.words = ["beautiful","dirty","dirt","stone","rough","water","smooth","harsh","jade","gold","golden","plating","plate","plated","notched","carved","carving","chiseled","tile","button","jagged","porus","spongy","sponge","carpet","wall","floor","dull","shiny","special","clay","mud","sand","magma","lava","leaves","wood","bark","cloth","concrete","curtain","striped","flag","sign","pillar","column","linoleum","quartz","planks","screen","metal","iron","fur","plastic","tinny","tin","steel","marble","marbled","meat","meaty","slippery","red","orange","yellow","lime","green","blue","indigo","purple","magenta","black","pink","white","light","dark","grey","brown","rouge","lemon","sour","foul","awful","amazing","book","paper","leather","glass","glassy","wet","hot","cold","warm","lukewarm","rock","boulder","moss","mossy","abstract","geometric","artistic","algebraic","archaic","simple","crude","basic","cell","battery","tissue","outlet","screw","nail","iridescent","refractive","pearlescent","pearl","cracked","shattered","torn","worn","broken","java","script","cascading","style","sheet","hypertext","markup","language","powder","powdered","calculus","wave","tangent","square","root","gradient","papyrus","cactus","thorny","terrain","rocky","mountain","enormous","miniscule","firey","string","array","set","map","hash","hashed","text","textual","texture","generic","bland","obtuse","obsidian","geode","ruby","platform","sludge","random","procedural","predictable","c","ansi","plus","flower","bone","boned","ball","grass","weed","roof","shingles","cancer","glowing","glowy","glow","bitwise","fractal","recursive","insane","crazy","self","similar","structure","logical","assembly","low","level","with","flat","sprite","buffer","file","stream","memory","pixel","bottle","ur","heaven","bubble","bubbles","sequence","glitter","glittery","sparkles","sparkly","fancy","holy","temple","frutiger","aero","bar","bars","barred","wavy","null","void","pointer","flooring","machine","machinary","graph","mushroom","stalk","trunk","oak","pine","ghost","gum","table","brain","positive","negative","electron","electric","spark","glaze","wine","bread","skin","blood","lambda","foo","baz","jet","theta","pi","ceiling","tube","lamp","lantern","pattern","design","serpent","apple","software","abraham","angel","theology","cloud","edges","edge","blobs","border","noise","bort","phonks","bart","jb","jbmod","man","guy","relt","wawa","chang","charoid","reltoid","take","my","meds","fat","boy","big","money","william","banks","is","a","good","person","maluch","xenia","modification","api","cayama","slop","sloppy","sloppiest","girl","cock","slim","how","to","start","god","bless","usa","floppa","floppoid","pornist","penile","B==============D~~~~~~~~~~-----","little","steam","steamy","freak","freaky","bling","ping","pong","computer","processor","computation","global","local","logarithmic","exponential","in","or","out","commodore","64","amiga","atari","dictionary","complete","scrap","scrapped","scraps","scrapper","incomplete","abandoned","unfinished","finished","some","command","description","pounds","butter","honolulu","estrogen","glory","administrator","help","one","for","me","shit","nooo","no","yes","spave","malloc","hoy","edict","spungler","spoomler","sdoon","grout","ghoul","vivement","joyous","joyfil","joyful","joy","rtv","mind","mindwave","epstein","trump","glory to the administrator","one for me and one for me","sometimes i dream about cheese","dream","cheese","sometimes","about","clone","maw","maws","feet","foot","scratch","cat","hell","babble","babbler","pumpkin","works","dox","doxxed","angler","fish","fishie","ovh","ass","party","lmao","blacked","mr","those who know","those","who","know","inspect","radio","meet","meet me at the radio","port","dangdong","stressed","box","agartha","ufo","doubleplusungood","unwholesome","nineteen","eighty","four","strike","dolbab","doldad","dolbabian","spitish","suckfishes","purgatorian","relentlessnesses","vibe","code","dribble","crash","crasher","content","house","dead","mechanic","less","space","construct","construction","round","bunker","test","prop","props","hand","hands","soda","can","canned","pop","cola","coke","degenerate","faces","face","rebel","chat","generate","generative","boring","bored","bore","hole","hold","holes","chamber","chambered","chambers","charred","char","diddy","blud","ts","pmo","charisma","charismatic","chloroplast","eukaryote","prokaryote","cells","celled","trollimog","wafers","sneed","feed","seed","formerly","chuck","chick","sick","suck","haus","hl2world","world","hl2","animation","cycler","bb","think","unperson"]
+    self.map_prefixes = ["jb","jb","jb","jb","jb","gm","gm","gm","de","jbdm","jbdm","jbdm","ttt","jbsm","phy","test","sdk"]
     
 class GlobalState:
   def __init__(self):
@@ -201,6 +271,7 @@ class GlobalState:
       "$help": CommandHelp(),
       "$???": CommandQuestioneyQuestioneyQuestioney(),
       "$god": CommandGod(),
+      "$relt": CommandRelt(),
       "$stats": CommandStats(),
       "$hangman": CommandHangman(),
       "$guess": CommandBabble("$guess", "Stupid Dumb Fucking Idiot.", "babble"),
@@ -223,11 +294,34 @@ class GlobalState:
     self.hangman = HangmanManager()
     self.god = GodManager()
     self.player_data = {}  #"steam id"    : tokens
-    self.player_data_new = {} #"steam id" : player object
+    self.player_newdat = {} #"steam id" : player object
     self.player_names = {} #"steam id"    : "player name"
     self.player_ids = {}   #"player name" : "steam id"
     self.macros = {}       #"macro name   : macro object
     self.autobabbles = {}  #"query        : "response"
+    self.reltbabble = []
+    #60
+    raw = open("reltbabble_p50.txt", "r", encoding="utf-8")
+    lines = raw.readlines()
+    reltino_name = "whatsavalue"
+    for line in lines:
+      if not line[:len(reltino_name)] == reltino_name:
+        self.reltbabble.append(line)
+        
+    raw.close()
+    
+    self.config = {}
+    
+    #stripped = open("reltbabble_p40_stripped.txt", "w", encoding="utf-8")
+    #
+    #for line in self.reltbabble:
+    #  stripped.write(line)
+    #  
+    #stripped.close()
+    #print(self.reltbabble)
+    
+    #sys.exit(1)
+    
     
 ################
 
@@ -401,7 +495,9 @@ class CommandQuestioneyQuestioneyQuestioney(Command):
     else:
       stat = args[0]
       if stat == "player_data":
-        yap(str(state.player_data))
+        yap("nah")#str(state.player_data))
+      if stat == "player_newdat":
+        yap(str(state.player_newdat))
       elif stat == "autobabbles":
         yap(str(state.autobabbles))
     
@@ -442,7 +538,7 @@ class CommandGod(Command):
         word_count = int(args[0])
         
         if word_count > 100:
-          yap("that is way too many words")
+          yap("That is way too many words.")
           return
         
       except ValueError:
@@ -459,25 +555,53 @@ class CommandGod(Command):
     for i in range(word_count):
       god_word = random.choice(state.god.words)
       if jbmode: god_word = god_word.replace(' ', '_')
+      #nineteen eight-four
+      if rand_bool(30):
+        god_word = "un" + god_word
+      elif rand_bool(30):
+        god_word = "mal" + god_word
+      elif rand_bool(30):
+        god_word = "good" + god_word
+        
+      if rand_bool(30):
+        god_word = "plus" + god_word
+      elif rand_bool(30):
+        god_word = "doubleplus" + god_word
+        
+      if rand_bool(30):
+        god_word = "old" + god_word
+      elif rand_bool(30):
+        god_word = "new" + god_word
+        
+      if rand_bool(30):
+        god_word = "up" + god_word
+        
+      if rand_bool(30):
+        god_word = "ante" + god_word
+      elif rand_bool(30):
+        god_word = "post" + god_word
+      
+      if rand_bool(10): god_word += "oid"
+      
       god_text += god_word
-      if random.randint(0, 10) == 0: god_text += "oid"
+      
       if i != word_count - 1:
         if jbmode:
           god_text += '_'
         else:
-          if random.randint(0, 15) == 0:
+          if rand_bool(15):
             god_text += '-'
-          elif random.randint(0, 15) == 0:
+          elif rand_bool(15):
             god_text += '_'
-          elif random.randint(0, 25) == 0:
-            god_text += ' jb_'
+          elif rand_bool(25):
+            god_text += ' ' + random.choice(state.god.map_prefixes) + '_'
           else:
             god_text += ' '
         
     if jbmode:
-      god_text = random.choice(state.god.prefixes) + '_' + god_text
-      if random.randint(0, 3) == 0:
-        god_text += '_v' + str(random.randint(0, 10))
+      god_text = random.choice(state.god.map_prefixes) + '_' + god_text
+      if rand_bool():
+        god_text += '_v' + str(random.randint(0, 20))
       
     yap(prefix + "God says: " + god_text)
 
@@ -552,11 +676,13 @@ class CommandCasino(Command):
       yap("How To Enter Relt's Casino.")
       return
       
-    if author in state.player_data:
+    if author in state.player_newdat:
+      player = state.player_newdat[author]
+      
       if len(args) > 0:
         arg_bet = args[0]
         if arg_bet == "all":
-          bet = state.player_data[author]
+          bet = player.tokens
         else:
           try:
             bet = int(args[0])
@@ -564,8 +690,8 @@ class CommandCasino(Command):
             yap("Bet can only be a whole number or 'all.'")
             return
             
-      if state.player_data[author] - bet < 0:
-        yap("{} only has {} tokens...".format(author, state.player_data[author]))
+      if player.tokens - bet < 0:
+        yap("{} only has {} tokens...".format(author, player.tokens))
         return
       elif bet < 0:
         yap("{}, you cannot bet negative tokens!".format(author))
@@ -597,7 +723,7 @@ class CommandCasino(Command):
         #("ZEN", SLOT_ZENNY),
         (" U ", SLOT_HORSESHOE),
         #("nMn", SLOT_CROWN),
-        ("<> ", SLOT_DIAMOND)
+        #("<> ", SLOT_DIAMOND)
         #("(|)", SLOT_SPADE),
         #("<>'", SLOT_LEMON)
       ]
@@ -619,10 +745,11 @@ class CommandCasino(Command):
       elif choices[0][1] == SLOT_BIG_MONEY and choices[1][1] == SLOT_BIG_MONEY and choices[2][1] == SLOT_BIG_MONEY:
         earned_tokens = 25
       elif choices[0][1] == SLOT_RELT and choices[1][1] == SLOT_RELT and choices[2][1] == SLOT_RELT:
-        earned_tokens = 1000
+        #square the bet
+        earned_tokens = bet
       elif choices[0][1] == choices[1][1] == choices[2][1]:
         #any 3 slots that are the same
-        earned_tokens = 1
+        earned_tokens = 2
       else:
         for slot in choices:
           if slot[1] == SLOT_BAR:
@@ -639,12 +766,12 @@ class CommandCasino(Command):
       earning = bet * earned_tokens - bet
       
       yap("{} bet {} tokens. Results: {}. {} earned {} tokens".format(author, bet, display_text, info, earning))
-      state.player_data[author] += earning
+      player.tokens += earning
     else:
-      state.player_data[author] = GUD_API_STARTING_PLAYER_DATA
-      yap("{} was previously unregistered. They have been given {} tokens.".format(author, state.player_data[author]))
+      state.player_newdat[author] = Player("n\a", author)
+      yap("{} was previously unregistered. They have been given {} tokens.".format(author, GUD_API_STARTING_PLAYER_DATA))
       
-    update_api_data_file(state.player_data)
+    #update_api_data_file(state.player_data)
 
 ################
 
@@ -769,7 +896,7 @@ class CommandClear(Command):
     self.is_restricted = True
   
   def execute(self, author, args, state):
-    f = open(GUD_API_LOG_PATH, "w")
+    f = open(GUD_API_LOG_PATH, "w", encoding="utf-8")
     for i in range(GUD_API_RECENT_LINES_MAX):
       f.write("padding {}\n".format(i))
     
@@ -803,17 +930,21 @@ class CommandStats(Command):
       person = " ".join(args)
       external_check = True
       
-    if person in state.player_data:
+    if person in state.player_newdat:
       #TODO: save previously recorded stats
-      player = state.player_data_new[person]
-      yap("{}: {} tokens, {} kills and {} deaths.".format(person, player.tokens, player.kills, player.deaths))
+      player = state.player_newdat[person]
+      tokens_txt = format_count(player.tokens, "token")
+      kills_txt = format_count(player.kills, "kill")
+      deaths_txt = format_count(player.deaths, "death")
+      
+      yap("{}: {}, {} and {}. ID: {}".format(person, tokens_txt, kills_txt, deaths_txt, player.id))
     else:
       if external_check:
-        yap("{} has not registered.".format(person))
+        yap("{} is not registered.".format(person))
         
       else:
-        state.player_data[person] = GUD_API_STARTING_PLAYER_DATA
-        yap("{} has successfully registered. They have been given {} tokens.".format(person, GUD_API_STARTING_PLAYER_DATA))
+        state.player_newdat[person] = Player("n/a", person)
+        yap("{} is now registered. They have been given {} tokens.".format(person, GUD_API_STARTING_PLAYER_DATA))
     
 ################
 
@@ -958,16 +1089,76 @@ class CommandVaporize(Command):
     else:
       yap("command unplenty arguments") #Command does not have enough arguments.
     
+################
+
+class CommandRelt(Command):
+  def __init__(self):
+    self.name = "$relt"
+    self.description = "Prints a random Relt quote. '$relt <message>' answers a question."
+    self.is_restricted = False
+  
+  def execute(self, author, args, state):
+    god_text = ""
+    prefix = ""
+    word_count = random.randrange(17)
+    jbmode = False
+    
+    if len(args) > 0:
+      if args[0] == "map":
+        jbmode = True
+        word_count = random.randrange(9)
+      else:
+        for arg in args[:-1]:
+          prefix += arg
+          prefix += " "
+      
+        prefix += args[-1] + "? "
+      
+    babble = random.choice(state.reltbabble)
+      
+    yap(prefix + "Relt says: " + babble)
+
 recent_lines = [] #(index, content)
 used_line_indices = []
 
 global_state = GlobalState()
 
-parse_api_data(global_state)
+#parse_api_data(global_state)
+try:
+  config_file = open("config.pydn", "r", encoding="utf-8")
+  global_state.config = pydn.decode(config_file.read())
+  config_file.close()
+  
+except FileNotFoundError:
+  yap("[ERROR] Could not find 'config.pydn'. Are you sure it's in the same folder as 'gud_api.py'?")
+  export_cfg("inline")
+  time.sleep(1)
+  cfg = []
+  export_cfg("inline")
+  sys.exit(1)
 
+try:
+  data_file = open("database.pydn", "r", encoding="utf-8")
+  player_data_raw = pydn.decode(data_file.read())["player_data"]
+  data_file.close()
+  #TODO: use player ID instead of name for this
+  for player_name in player_data_raw:
+    player_raw = player_data_raw[player_name]
+    global_state.player_newdat[player_name] = Player("n/a", player_raw[0], player_raw[1], player_raw[2], player_raw[3])
+  
+except FileNotFoundError:
+  #TODO: this should get created automatically
+  yap("[ERROR] Could not find 'database.pydn'. Are you sure it's in the same folder as 'gud_api.py'?")
+  export_cfg("inline")
+  time.sleep(1)
+  cfg = []
+  export_cfg("inline")
+  sys.exit(1)
+  
+  
 #time.sleep(10)
 
-print("current user is: {}".format(GUD_API_USER))
+print("current admin is: {}".format(global_state.config["system"]["admin"]))
 
 collected_words = []
 duplicate_words = ""
@@ -982,7 +1173,9 @@ for word in global_state.god.words:
 if duplicate_words != "":
   yap("[INFO] Fail in setup--duplicate god words: " + duplicate_words)
 else:
-  yap("[INFO] gud_api is online. Type '$help' for a list of commands.")
+  #yap("[INFO] gud_api is online. Type '$help' for a list of commands.")
+  #yap("[INFO] Playerdata is being rewritten, it will not save. Type '$help' for a list of commands.")
+  yap(global_state.config["system"]["start_message"])
   
 for i in range(GUD_API_RECENT_LINES_MAX):
   cmd("echo padding {}".format(i))
@@ -1003,7 +1196,7 @@ try:
   while True:
     print(ran_command)
 
-    f = open(GUD_API_LOG_PATH, 'r')
+    f = open(GUD_API_LOG_PATH, 'r', encoding="utf-8")
     log = f.read()
     log_read_count += 1
     lines = log.split('\n')
@@ -1103,7 +1296,7 @@ try:
                 export_cfg("inline")
                 
               else:
-                yap("this command is restricted")
+                yap("This command is restricted.")
                 ran_command = True
                 export_cfg("inline")
               
@@ -1116,10 +1309,10 @@ try:
           elif len(command_name) > 1:
             if command_name[0] == '$':
               
-              yap("unknown command '{}', type $help for command list".format(message))
+              yap("Unknown command '{}.' Type $help for command list.".format(message))
               
               ran_command = True
-              export_cfg("inline")
+              export_cfg("inline") 
               print("executed " + command_name)
         
           #time.sleep(1)
@@ -1132,7 +1325,8 @@ try:
             #killed panda killed pasta with killed sauce with crowbar
             #("NotBart killed pumpkinworks with crowbar")
             
-            #echo NotBart killed pumpkinworks with crowbar
+            #echo "Backshot Betty #killtf2 killed JBMan with crowbar"
+            #echo "NotBart killed pumpkinworks with crowbar"
             split_killed = last_line.split(" killed ")
             split_with = split_killed[1].split(" with ")
             
@@ -1140,19 +1334,24 @@ try:
             killer = split_killed[0]
             victim = split_with[-2]
             yap("{} | {}".format(killer, victim))
-            #these players should ALWAYS exist
-            if not killer in global_state.player_data:
-              global_state.player_data[killer] = GUD_API_STARTING_PLAYER_DATA
-              
-            if not victim in global_state.player_data:
-              global_state.player_data[killer] = GUD_API_STARTING_PLAYER_DATA
-              
-            global_state.player_data[killer] += 5
-            global_state.player_data[victim] -= 2
-            update_api_data_file(global_state.player_data)
+            ran_command = True
+            export_cfg("inline") 
             
-            if killer in global_state.player_data:
-              if victim in global_state.player_data:
+            if not killer in global_state.player_newdat:
+              global_state.player_newdat[killer] = Player("n/a", killer)
+              
+            if not victim in global_state.player_newdat:
+              global_state.player_newdat[victim] = Player("n/a", victim)
+              
+            global_state.player_newdat[killer].kills += 1
+            global_state.player_newdat[killer].tokens += 5
+            
+            global_state.player_newdat[victim].deaths += 1
+            global_state.player_newdat[victim].tokens -= 2
+            #update_api_data_file(global_state.player_data)
+            
+            """if killer in global_state.player_newdat:
+              if victim in global_state.player_newdat:
                 yap(killer + ", " + victim)
                 
                 ran_command = True
@@ -1170,7 +1369,7 @@ try:
               #yap("k can't use kill tracker for " + killer + ", they aren't registered")
               
               #ran_command = True
-              #export_cfg("inline")
+              #export_cfg("inline")"""
             
             
             
@@ -1188,7 +1387,7 @@ try:
     time.sleep(2)
         
 #OSError
-except Exception as e:
+except OSError as e:
   cfg = []
   yap("failure in main command loop: {}".format(e)) # crash message
   export_cfg("inline")
