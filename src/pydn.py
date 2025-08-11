@@ -23,6 +23,10 @@ import math
 
 #REMINDER: comments (for the code)
   
+
+FLAG_COMPACT_LISTS = 1
+FLAG_COMPACT_DICTS = 2
+
 def main() -> None:
   """f = open("test.pydn", "r")
   raw_text = f.read()
@@ -77,8 +81,8 @@ def main() -> None:
     ]
   }
 
-  print(encode(raw_dict, "this regnerates automatically", "shit wont be saved"))
-  print(decode(encode(raw_dict)))
+  print(encode(raw_dict, FLAG_COMPACT_LISTS, "this regnerates automatically", "shit wont be saved"))
+  #print(decode(encode(raw_dict)))
   
 class PyDNEncodeError(ValueError):
   pass
@@ -86,8 +90,8 @@ class PyDNEncodeError(ValueError):
 def decode(raw_text) -> dict:
   return decode_dict_leaf(raw_text, 0, 0)
 
-def encode(raw_dict, *comments) -> str:
-  encoded_text = encode_dict_leaf(raw_dict, 1)
+def encode(raw_dict, flags, *comments) -> str:
+  encoded_text = encode_dict_leaf_pretty(raw_dict, flags, 1)
   
   if len(comments) > 0:
     comments_joined = ""
@@ -402,7 +406,7 @@ def decode_dict_leaf(raw_text, starting_idx, starting_depth) -> dict:
       
   raise EOFError("reached end of file in parse_dict_leaf()")
 
-def encode_dict_leaf(raw_dict, starting_depth) -> str:
+def encode_dict_leaf_pretty(raw_dict, flags, starting_depth) -> str:
   #verbose and compact output?
   output_text = "{\n"
   depth = starting_depth
@@ -428,10 +432,13 @@ def encode_dict_leaf(raw_dict, starting_depth) -> str:
       output_text += '{}"{}": "{}"'.format(spacing, key, value_reformatted)
 
     elif value_type == dict:
-      output_text += '{}"{}": {}'.format(spacing, key, encode_dict_leaf(value, depth + 1))
+      output_text += '{}"{}": {}'.format(spacing, key, encode_dict_leaf_pretty(value, flags, depth + 1))
 
     elif value_type == list:
-      output_text += '{}"{}": {}'.format(spacing, key, encode_list_leaf(value, depth + 1))
+      if flags & FLAG_COMPACT_LISTS == 0:
+        output_text += '{}"{}": {}'.format(spacing, key, encode_list_leaf_pretty(value, flags, depth + 1))
+      else:
+        output_text += '{}"{}": {}'.format(spacing, key, encode_list_leaf_compact(value, flags, depth + 1))
       
     elif value == math.nan:
       output_text += '{}"{}": math.nan'.format(spacing, key)
@@ -461,7 +468,7 @@ def encode_dict_leaf(raw_dict, starting_depth) -> str:
   
   return output_text
   
-def encode_list_leaf(raw_list, starting_depth) -> str:
+def encode_list_leaf_pretty(raw_list, flags, starting_depth) -> str:
   output_text = "[\n"
   depth = starting_depth
   i = 0
@@ -484,10 +491,10 @@ def encode_list_leaf(raw_list, starting_depth) -> str:
       output_text += spacing + '"' + item_reformatted + '"'
 
     elif item_type == dict:
-      output_text += spacing + encode_dict_leaf(item, depth + 1)
+      output_text += spacing + encode_dict_leaf_pretty(item, flags, depth + 1)
 
     elif item_type == list:
-      output_text += spacing + encode_list_leaf(item, depth + 1)
+      output_text += spacing + encode_list_leaf_pretty(item, flags, depth + 1)
       
     elif item == math.nan:
       output_text += spacing + "math.nan"
@@ -504,8 +511,6 @@ def encode_list_leaf(raw_list, starting_depth) -> str:
     else:
       raise NotImplementedError("Type {} is not implemented in PyDN.".format(value_type))
     
-    
-    
     if i == len(raw_list) - 1:
       output_text += "\n"
     else:
@@ -514,6 +519,59 @@ def encode_list_leaf(raw_list, starting_depth) -> str:
     i += 1
   
   output_text += "  " * (depth - 1) + ']'
+  
+  return output_text
+  
+def encode_list_leaf_compact(raw_list, flags, starting_depth) -> str:
+  output_text = "["
+  depth = starting_depth
+  i = 0
+  for item in raw_list:
+    item_type = type(item)
+    
+    if item_type == str:
+      #TODO: hex escape characters for unicode?
+      item_reformatted = (item
+      .replace("\\", "\\\\")
+      .replace("\"", "\\\"")
+      .replace("\'", "\\'")
+      .replace("\n", "\\n")
+      .replace("\b", "\\b")
+      .replace("\f", "\\f")
+      .replace("\t", "\\t")
+      .replace("\r", "\\r"))
+      
+      output_text += '"' + item_reformatted + '"'
+
+    elif item_type == dict:
+      output_text += encode_dict_leaf_pretty(item, flags, depth + 1)
+
+    elif item_type == list:
+      output_text += encode_list_leaf_compact(item, flags, depth + 1)
+      
+    elif item == math.nan:
+      output_text += "math.nan"
+      
+    elif item == math.inf:
+      output_text += "math.inf"
+      
+    elif item == -math.inf:
+      output_text += "-math.inf"
+      
+    elif item_type == int or item_type == float or item_type == bool or item == None:
+      output_text += str(item)
+      
+    else:
+      raise NotImplementedError("Type {} is not implemented in PyDN.".format(value_type))
+    
+    if i == len(raw_list) - 1:
+      pass
+    else:
+      output_text += ", "
+    
+    i += 1
+  
+  output_text += ']'
   
   return output_text
 

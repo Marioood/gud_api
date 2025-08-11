@@ -9,10 +9,10 @@ import pydn
 GUD_API_USER = "DEPRECATED" #your steam name. used to prevent randos from restarting the python script
 GUD_API_TICK_DELAY = 400 #sync this with the blah blah alias thingie
 GUD_API_CFG_PATH = "gud_api.cfg" #where the cfg is
-GUD_API_DATA_PATH = "gud_api_player_data.txt" #where the data is
+GUD_API_DATA_PATH = "database.pydn" #where the data is
 GUD_API_LOG_PATH = "C:/Program Files (x86)/Steam/steamapps/common/JBMod/jbmod/console.log" #where the log file is. MAKE SURE to put '-condebug' in your launch parameters to make console.log work.
 GUD_API_RECENT_LINES_MAX = 16 #how many recent console.log entries are saved when scanning for commands
-
+GUD_API_CONSOLE_USER = "[CONSOLE]"
 # dont change these unless you want to get HAXXED
 GUD_API_STUPID_RCE = False
 GUD_API_STUPID_IGNORE_ADMIN = False
@@ -24,10 +24,12 @@ GUD_API_STARTING_PLAYER_DATA = 1000
 #TODO: command queue
 #TODO: prevent babble jams when the script is halted unexpectedly
 #TODO: reformatting for yap()
+#TODO: mac os $monkey command (random commands w/ random inputs)
+#TODO: $rep NotBart
 
 cfg = []
 cfg_write_count = 0
-
+  
 def format_count(count, singular, plural = None):
   if plural == None: plural = singular + "s"
   
@@ -60,6 +62,7 @@ def cmd_unsafe(text):
   cfg.append(text)
   
 chang_mode = False
+use_command_line = False
   
 def yap(text):
   """text_bak = text
@@ -79,37 +82,50 @@ def print_cfg():
 def export_cfg(type):
   global cfg
   global cfg_write_count
+  global use_command_line
   
-  f = open(GUD_API_CFG_PATH, "w", encoding="utf-8")
-  print("cfg contents:")
-  
-  try:
-    if type == "inline":
-      # write cfg
-      for txt in cfg:
-        f.write(txt)
-        f.write(';')
-    elif type == "cfg":
-      # write cfg
-      for txt in cfg:
-        f.write(txt)
-        f.write('\n')
-  except Exception as e:
-    open(GUD_API_CFG_PATH, "w", encoding="utf-8").close()
-    cfg = []
-    f.write("say failure in export_cfg(): {}".format(e)) # crash messages
-    print("export_cfg() failed!")
-    
-  # print info
-  for txt in cfg:
-    print("  " + txt)
-    
-  print()
-  print("successfully wrote to " + GUD_API_CFG_PATH)
   cfg_write_count += 1
-  f.close()
-#status
-def parse_api_data(state):
+    
+  if use_command_line:
+    for txt in cfg:
+      if txt[:3] == "say":
+        print((GUD_API_CONSOLE_USER + " :  " + txt[4:].replace('"', ""))[:256])
+        
+      else:
+        print(txt)
+      
+  else:
+    f = open(GUD_API_CFG_PATH, "w", encoding="utf-8")
+    print("cfg contents:")
+    
+    try:
+      if type == "inline":
+        # write cfg
+        for txt in cfg:
+          f.write(txt)
+          f.write(';')
+      elif type == "cfg":
+        # write cfg
+        for txt in cfg:
+          f.write(txt)
+          f.write('\n')
+          
+    except Exception as e:
+      open(GUD_API_CFG_PATH, "w", encoding="utf-8").close()
+      cfg = []
+      f.write("say failure in export_cfg(): {}".format(e)) # crash messages
+      print("export_cfg() failed!")
+      
+    # print info
+    for txt in cfg:
+      print("  " + txt)
+      
+    print()
+    print("successfully wrote to " + GUD_API_CFG_PATH)
+    f.close()
+    
+#status -- what?
+"""def parse_api_data(state):
   f = open(GUD_API_DATA_PATH, "r", encoding="utf-8")
   lines = f.readlines()
   parsed = []
@@ -168,9 +184,9 @@ def parse_api_data(state):
   print(parsed)
   print(player_data)
   
-  state.player_newdat = player_data
+  state.player_newdat = player_data"""
   
-def update_api_data_file(player_data):
+"""def update_api_data_file(player_data):
   f = open(GUD_API_DATA_PATH, "w", encoding="utf-8")
   print("player data contents:")
   
@@ -199,10 +215,10 @@ def update_api_data_file(player_data):
     print('  "{}" "{}"'.format(pair[0], pair[1]))
     
   print()
-  print("successfully wrote to " + GUD_API_DATA_PATH)
+  print("successfully wrote to " + GUD_API_DATA_PATH)"""
   
   
-def update_newdat(player_newdat):
+def update_database(global_state):
   #CLOSE FILES
   #CLOSE FILES
   #CLOSE FILES
@@ -219,35 +235,34 @@ def update_newdat(player_newdat):
   #CLOSE FILES
   #CLOSE FILES
   #CLOSE FILES
+  
   f = open(GUD_API_DATA_PATH, "w", encoding="utf-8")
-  print("player newdata contents:")
   
   try:
-    f.write("#this file regenerates automatically\n")
-    f.write("#comments left in this file will not be saved\n\n")
+    #turn objects into lists
+    database = {}
+    player_data_reformatted = {}
     
-    for pair in player_newdat.items():
-      player_name = pair[0]
-      player_name = player.replace('\\', '\\\\')
-      player_name = player.replace('"', '\\"')
-      player = pair[1]
-      
-      f.write('"{}" "{}" "{}" "{}"'.format(player_name, player.tokens, player.kills, player.deaths))
-      f.write('\n')
-      
+    for player_name in global_state.player_newdat:
+      player_obj = global_state.player_newdat[player_name]
+      player_list = [player_obj.name, player_obj.tokens, player_obj.kills, player_obj.deaths]
+      player_data_reformatted[player_name] = player_list
+    
+    database["player_data"] = player_data_reformatted
+    
+    player_data_encoded = pydn.encode(database, pydn.FLAG_COMPACT_LISTS, "This file regenerates automatically; comments left in it will not be saved.", "Player data is stored as: SteamID: [name, tokens, kills, deaths].")
+    f.write(player_data_encoded)
     f.close()
+    
   except Exception as e:
+    #TODO: rather unusual, and also incompatable with command line mode
     open(GUD_API_DATA_PATH, "w", encoding="utf-8").close()
     cfg = []
-    f.write("say failure in update_newdat(): {}".format(e)) # crash messages
-    print("update_newdat() failed!")
-    
-  # print info
-  for pair in player_data.items():
-    print('  "{}" "{}"'.format(pair[0], pair[1]))
+    f.write("say failure in update_database(): {}".format(e)) # crash messages
+    print("update_database() failed!")
     
   print()
-  print("successfully wrote to " + GUD_API_DATA_PATH)
+  print("[INFO] Successfully wrote to " + GUD_API_DATA_PATH)
 
 class HangmanManager:
   def __init__(self):
@@ -272,6 +287,7 @@ class GlobalState:
       "$???": CommandQuestioneyQuestioneyQuestioney(),
       "$god": CommandGod(),
       "$relt": CommandRelt(),
+      "$floppa": CommandFloppa(),
       "$stats": CommandStats(),
       "$hangman": CommandHangman(),
       "$guess": CommandBabble("$guess", "Stupid Dumb Fucking Idiot.", "babble"),
@@ -295,7 +311,6 @@ class GlobalState:
     self.god = GodManager()
     self.player_data = {}  #"steam id"    : tokens
     self.player_newdat = {} #"steam id" : player object
-    self.player_names = {} #"steam id"    : "player name"
     self.player_ids = {}   #"player name" : "steam id"
     self.macros = {}       #"macro name   : macro object
     self.autobabbles = {}  #"query        : "response"
@@ -496,10 +511,16 @@ class CommandQuestioneyQuestioneyQuestioney(Command):
       stat = args[0]
       if stat == "player_data":
         yap("nah")#str(state.player_data))
+        
       if stat == "player_newdat":
         yap(str(state.player_newdat))
+        
       elif stat == "autobabbles":
+      
         yap(str(state.autobabbles))
+        
+      elif stat == "start_message":
+        yap(state.config["system"]["start_message"])
     
 ################
 
@@ -553,32 +574,33 @@ class CommandGod(Command):
           prefix += args[-1] + "? "
     
     for i in range(word_count):
+      #TODO: make this less voodoolicious
       god_word = random.choice(state.god.words)
       if jbmode: god_word = god_word.replace(' ', '_')
       #nineteen eight-four
-      if rand_bool(30):
+      if rand_bool(50):
         god_word = "un" + god_word
-      elif rand_bool(30):
+      elif rand_bool(50):
         god_word = "mal" + god_word
-      elif rand_bool(30):
+      elif rand_bool(50):
         god_word = "good" + god_word
         
-      if rand_bool(30):
+      if rand_bool(50):
         god_word = "plus" + god_word
-      elif rand_bool(30):
+      elif rand_bool(50):
         god_word = "doubleplus" + god_word
         
-      if rand_bool(30):
+      if rand_bool(50):
         god_word = "old" + god_word
-      elif rand_bool(30):
+      elif rand_bool(50):
         god_word = "new" + god_word
         
-      if rand_bool(30):
+      if rand_bool(50):
         god_word = "up" + god_word
         
-      if rand_bool(30):
+      if rand_bool(50):
         god_word = "ante" + god_word
-      elif rand_bool(30):
+      elif rand_bool(50):
         god_word = "post" + god_word
       
       if rand_bool(10): god_word += "oid"
@@ -945,6 +967,7 @@ class CommandStats(Command):
       else:
         state.player_newdat[person] = Player("n/a", person)
         yap("{} is now registered. They have been given {} tokens.".format(person, GUD_API_STARTING_PLAYER_DATA))
+        update_database(state)
     
 ################
 
@@ -1052,17 +1075,17 @@ class CommandVaporize(Command):
     if len(args) > 0:
       victim = " ".join(args)
       
-      if state.player_data == {}: 
+      if state.player_newdat == {}: 
         yap("persons data unexist allwise") #Any/all player data does not exist.
         return
         
       if victim == "{random}":
-        victim = random.choice(list(state.player_data.keys()))
+        victim = random.choice(list(state.player_newdat.keys()))
       elif victim == "{self}":
         victim = author
           
-      if victim in state.player_data:
-        del state.player_data[victim]
+      if victim in state.player_newdat:
+        del state.player_newdat[victim]
         messages = [
           "{} doublepluscold", #{} is extremely cold.
           "doubleplusungood person {} unpersoned",#"Doubleplusungood player {} has been vaporized.",
@@ -1075,13 +1098,13 @@ class CommandVaporize(Command):
           "sended {} joycamp" #Sent {} to a labor camp.
         ]
         yap(random.choice(messages).format(victim))
-        update_api_data_file(state.player_data)
+        update_database(state)
         
       else:
         if victim == "{all}":
-          state.player_data.clear()
+          state.player_newdat.clear()
           yap("unfile persons data allwise") #All player data has been deleted.
-          update_api_data_file(state.player_data)
+          update_database(state)
           
         else:
           yap("command refs unperson {}".format(victim)) #Player {} in command does not exist.
@@ -1117,281 +1140,519 @@ class CommandRelt(Command):
     babble = random.choice(state.reltbabble)
       
     yap(prefix + "Relt says: " + babble)
-
-recent_lines = [] #(index, content)
-used_line_indices = []
-
-global_state = GlobalState()
-
-#parse_api_data(global_state)
-try:
-  config_file = open("config.pydn", "r", encoding="utf-8")
-  global_state.config = pydn.decode(config_file.read())
-  config_file.close()
-  
-except FileNotFoundError:
-  yap("[ERROR] Could not find 'config.pydn'. Are you sure it's in the same folder as 'gud_api.py'?")
-  export_cfg("inline")
-  time.sleep(1)
-  cfg = []
-  export_cfg("inline")
-  sys.exit(1)
-
-try:
-  data_file = open("database.pydn", "r", encoding="utf-8")
-  player_data_raw = pydn.decode(data_file.read())["player_data"]
-  data_file.close()
-  #TODO: use player ID instead of name for this
-  for player_name in player_data_raw:
-    player_raw = player_data_raw[player_name]
-    global_state.player_newdat[player_name] = Player("n/a", player_raw[0], player_raw[1], player_raw[2], player_raw[3])
-  
-except FileNotFoundError:
-  #TODO: this should get created automatically
-  yap("[ERROR] Could not find 'database.pydn'. Are you sure it's in the same folder as 'gud_api.py'?")
-  export_cfg("inline")
-  time.sleep(1)
-  cfg = []
-  export_cfg("inline")
-  sys.exit(1)
-  
-  
-#time.sleep(10)
-
-print("current admin is: {}".format(global_state.config["system"]["admin"]))
-
-collected_words = []
-duplicate_words = ""
-
-for word in global_state.god.words:
-  if word in collected_words:
-    duplicate_words += word
-    duplicate_words += ' '
-  else:
-    collected_words.append(word)
-
-if duplicate_words != "":
-  yap("[INFO] Fail in setup--duplicate god words: " + duplicate_words)
-else:
-  #yap("[INFO] gud_api is online. Type '$help' for a list of commands.")
-  #yap("[INFO] Playerdata is being rewritten, it will not save. Type '$help' for a list of commands.")
-  yap(global_state.config["system"]["start_message"])
-  
-for i in range(GUD_API_RECENT_LINES_MAX):
-  cmd("echo padding {}".format(i))
-
-export_cfg("inline")
-print("starting text has been executed")
-
-time.sleep(1)
-
-cfg = []
-export_cfg("inline")
-print("starting text has been cleared")
-
-ran_command = False
-log_read_count = 0
-
-try:
-  while True:
-    print(ran_command)
-
-    f = open(GUD_API_LOG_PATH, 'r', encoding="utf-8")
-    log = f.read()
-    log_read_count += 1
-    lines = log.split('\n')
     
-    #skip parsing if there are too few log entries
-    if len(lines) <= GUD_API_RECENT_LINES_MAX:
-      time.sleep(3)
-      continue
-      
-    recent_lines = []
+################
+
+class CommandFloppa(Command):
+  def __init__(self):
+    self.name = "$floppa"
+    self.description = "'$floppa <count (default: random)>' prints a random list of barely-coherent words."
+    self.is_restricted = False
+  
+  def execute(self, author, args, state):
+    god_text = ""
+    prefix = ""
+    word_count = random.randrange(8) + 1
     
-    for i in range(-GUD_API_RECENT_LINES_MAX - 1, -1):
-      recent_lines.append((i + len(lines), lines[i]))
-    
-    if len(used_line_indices) > GUD_API_RECENT_LINES_MAX * 8:
-      used_line_indices = []
-    
-    print(recent_lines)
-    print(used_line_indices)
-    
-    for line_tuple in recent_lines:
-      if line_tuple[0] in used_line_indices:
-        pass
+    if len(args) > 0:
+      try:
+        word_count = int(args[0])
         
-      else:
-        used_line_indices.append(line_tuple[0])
-        last_line = line_tuple[1]#lines[-2]
-        #autobabble search
-        for phrase in global_state.autobabbles.keys():
-          if phrase.lower() in last_line.lower():
-            response = global_state.autobabbles[phrase]
-            last_line_formatted = last_line.replace(phrase, "{phrase}")
-            response = response.replace("{src}", last_line_formatted)
-              
-            yap(response)
-              
-            ran_command = True
-            export_cfg("cfg")
+        if word_count > 100:
+          yap("That is way too many words.")
+          return
         
-        #chat commands
-        split_message = last_line.split(':')
-        
-        if len(split_message) >= 2:
-          message = split_message[1][2:] #chop off leading space
+      except ValueError:
+        if args[0] == "map":
+          raise NotImplementedError("testicular cancer")
           
-          args = []
-          is_reading_string = False
-          cur_string = ""
-          prev_char = 'jb55'
-          is_escaped = False
-          #pedophile code
-          for i in range(len(message)):
-            char = message[i]
+        else:
+          for arg in args[:-1]:
+            prefix += arg
+            prefix += " "
+        
+          prefix += args[-1] + "? "
+
+    nouns = ["a","a","a","gm_construct","gm_counstruct","tree","tree","map","secret","platform","building","construct","room","pool","sign","juraywood","vehicle","player","stair","cylinder","gm_flatgrass","flattywood","hack","plane","all","door","gn_pissstruct","water","man","l4d2","dooble","thumb","playermodel","credit"]
+    pronouns = ["i","i","you","you","me","my","it","it's","this"]
+    verbs = ["delete","add","remove","use","like","favorite","sub","enjoy","made","edit","is","it's","fly","favor","do","work","think","thumb up","forgot"]
+    adverbs = ["bad","good","just","also","very"]
+    adjectives = ["best","new","fun","sphere","cylinder","worst","pee","good","bad","red","green","blue","purple","black","white","dark","light","first","old","second"]
+    conjunctions = ["the","and","if","then","but"]
+    prepositions = ["in","with","without"]
+    #filler = ["uhh...","yeah","like"]
+    THING = 1
+    VERB = 2
+    ADVERB = 3
+    ADJECTIVE = 4
+    CONJUNCTION = 5
+    
+    
+    if rand_bool(8):
+      god_text += random.choice(nouns) + ' '
+    else:
+      god_text += random.choice(pronouns) + ' '
+      
+    prev_type = THING
+          
+        
+          
+    for i in range(word_count):
+      if prev_type == THING or prev_type == VERB or prev_type == ADVERB:
+        if rand_bool(2):        
+          if rand_bool(2):
+            god_word = random.choice(verbs)
+            prev_type = VERB
+          
+            if rand_bool(4):
+              if god_word[-1] == 'e':
+                god_word += 'd'
+              else:
+                god_word += "ed"
             
-            if is_reading_string:
-            # or "'"
-              if char == '"':
-                if prev_char == '\\':
-                  cur_string += char
+          else:
+            god_word = random.choice(adverbs)
+            prev_type = ADVERB
+            
+        else:
+          if rand_bool(2):
+            god_word = random.choice(adjectives)
+            prev_type = ADJECTIVE
+            
+          else:
+            god_word = random.choice(conjunctions)
+            prev_type = CONJUNCTION
+              
+      elif prev_type == CONJUNCTION or prev_type == ADJECTIVE:
+        if rand_bool(2):
+          god_word = random.choice(pronouns)
+        else:
+          god_word = random.choice(nouns)
+          
+          if rand_bool(4):
+            god_word += 's'
+          
+        prev_type = THING
+      
+      god_text += god_word
+      
+      if i != word_count - 1:
+        god_text += ' '
+      
+    yap(prefix + "Floppa says: " + god_text)
+    
+def run_in_source(global_state):
+  global cfg
+  recent_lines = [] #(index, content)
+  used_line_indices = []
+  ran_command = False
+  log_read_count = 0
+  admin = global_state.config["system"]["admin"]
+  
+  try:
+    while True:
+      print(ran_command)
+
+      f = open(GUD_API_LOG_PATH, 'r', encoding="utf-8")
+      log = f.read()
+      log_read_count += 1
+      lines = log.split('\n')
+      
+      #skip parsing if there are too few log entries
+      if len(lines) <= GUD_API_RECENT_LINES_MAX:
+        time.sleep(3)
+        continue
+        
+      recent_lines = []
+      
+      for i in range(-GUD_API_RECENT_LINES_MAX - 1, -1):
+        recent_lines.append((i + len(lines), lines[i]))
+      
+      if len(used_line_indices) > GUD_API_RECENT_LINES_MAX * 8:
+        used_line_indices = []
+      
+      print(recent_lines)
+      print(used_line_indices)
+      
+      for line_tuple in recent_lines:
+        if line_tuple[0] in used_line_indices:
+          pass
+          
+        else:
+          used_line_indices.append(line_tuple[0])
+          last_line = line_tuple[1]#lines[-2]
+          #autobabble search
+          for phrase in global_state.autobabbles.keys():
+            if phrase.lower() in last_line.lower():
+              response = global_state.autobabbles[phrase]
+              last_line_formatted = last_line.replace(phrase, "{phrase}")
+              response = response.replace("{src}", last_line_formatted)
+                
+              yap(response)
+                
+              ran_command = True
+              export_cfg("cfg")
+          
+          #chat commands
+          split_message = last_line.split(':')
+          
+          if len(split_message) >= 2:
+            message = split_message[1][2:] #chop off leading space
+            
+            args = []
+            is_reading_string = False
+            cur_string = ""
+            prev_char = 'jb55'
+            is_escaped = False
+            #pedophile code
+            for i in range(len(message)):
+              char = message[i]
+              
+              if is_reading_string:
+              # or "'"
+                if char == '"':
+                  if prev_char == '\\':
+                    cur_string += char
+                  else:
+                    is_reading_string = False
+                    args.append(cur_string)
+                    cur_string = ""
+                elif char == '\\':
+                  pass
                 else:
-                  is_reading_string = False
+                  cur_string += char
+              else:
+                if char == ' ':
                   args.append(cur_string)
                   cur_string = ""
-              elif char == '\\':
-                pass
-              else:
-                cur_string += char
-            else:
-              if char == ' ':
-                args.append(cur_string)
-                cur_string = ""
-              elif char == '"':
-                is_reading_string = True
-                cur_string = ""
-              else:
-                cur_string += char
+                elif char == '"':
+                  is_reading_string = True
+                  cur_string = ""
+                else:
+                  cur_string += char
+              
+                if i == len(message) - 1:
+                  args.append(cur_string)
+              
+              prev_char = char
+              
+            print(args)
             
-              if i == len(message) - 1:
-                args.append(cur_string)
+            if len(args) > 0: command_name = args[0].lower()
+            author = split_message[0][:-1] #chop off trailing space
             
-            prev_char = char
-            
-          print(args)
-          
-          if len(args) > 0: command_name = args[0].lower()
-          author = split_message[0][:-1] #chop off trailing space
-          
-          if command_name in global_state.commands:
-            command = global_state.commands[command_name]
-            args = args[1:] #cut off the command part of the arguments
-            
-            if command.is_restricted:
-              if author == GUD_API_USER or GUD_API_STUPID_IGNORE_ADMIN:
-                command.execute(author, args, global_state)
-                print("executed " + command_name)
-                ran_command = True
-                export_cfg("inline")
+            if command_name in global_state.commands:
+              command = global_state.commands[command_name]
+              args = args[1:] #cut off the command part of the arguments
+              
+              if command.is_restricted:
+                if author == admin or GUD_API_STUPID_IGNORE_ADMIN:
+                  command.execute(author, args, global_state)
+                  print("executed " + command_name)
+                  ran_command = True
+                  export_cfg("inline")
+                  
+                else:
+                  yap("This command is restricted.")
+                  ran_command = True
+                  export_cfg("inline")
                 
               else:
-                yap("This command is restricted.")
+                command.execute(author, args, global_state)
                 ran_command = True
                 export_cfg("inline")
+                print("executed " + command_name)
+                
+            elif len(command_name) > 1:
+              if command_name[0] == '$':
+                
+                yap("Unknown command '{}.' Type $help for command list.".format(message))
+                
+                ran_command = True
+                export_cfg("inline") 
+          
+          else:
+            #kill tracker
+            kill_detected = " killed " in last_line and " with " in last_line
+            #kill_detected = kill_detected or " suicided " in last_line
+            if kill_detected:
+              #TODO: weapon death scores
+              #killed panda killed pasta with killed sauce with crowbar
+              #("NotBart killed pumpkinworks with crowbar")
               
-            else:
-              command.execute(author, args, global_state)
-              ran_command = True
-              export_cfg("inline")
-              print("executed " + command_name)
+              #echo "Backshot Betty #killtf2 killed JBMan with crowbar"
+              #echo "NotBart killed pumpkinworks with crowbar"
+              split_killed = last_line.split(" killed ")
+              split_with = split_killed[1].split(" with ")
               
-          elif len(command_name) > 1:
-            if command_name[0] == '$':
-              
-              yap("Unknown command '{}.' Type $help for command list.".format(message))
-              
+              assert len(split_killed) == 2 and len(split_with) == 2
+              killer = split_killed[0]
+              victim = split_with[-2]
+              yap("{} | {}".format(killer, victim))
               ran_command = True
               export_cfg("inline") 
-              print("executed " + command_name)
-        
-          #time.sleep(1)
-        else:
-          #kill tracker
-          kill_detected = " killed " in last_line and " with " in last_line
-          #kill_detected = kill_detected or " suicided " in last_line
-          if kill_detected:
-            #TODO: weapon death scores
-            #killed panda killed pasta with killed sauce with crowbar
-            #("NotBart killed pumpkinworks with crowbar")
-            
-            #echo "Backshot Betty #killtf2 killed JBMan with crowbar"
-            #echo "NotBart killed pumpkinworks with crowbar"
-            split_killed = last_line.split(" killed ")
-            split_with = split_killed[1].split(" with ")
-            
-            assert len(split_killed) == 2 and len(split_with) == 2
-            killer = split_killed[0]
-            victim = split_with[-2]
-            yap("{} | {}".format(killer, victim))
-            ran_command = True
-            export_cfg("inline") 
-            
-            if not killer in global_state.player_newdat:
-              global_state.player_newdat[killer] = Player("n/a", killer)
               
-            if not victim in global_state.player_newdat:
-              global_state.player_newdat[victim] = Player("n/a", victim)
+              if not killer in global_state.player_newdat:
+                global_state.player_newdat[killer] = Player("n/a", killer)
+                
+              if not victim in global_state.player_newdat:
+                global_state.player_newdat[victim] = Player("n/a", victim)
+                
+              global_state.player_newdat[killer].kills += 1
+              global_state.player_newdat[killer].tokens += 5
               
-            global_state.player_newdat[killer].kills += 1
-            global_state.player_newdat[killer].tokens += 5
-            
-            global_state.player_newdat[victim].deaths += 1
-            global_state.player_newdat[victim].tokens -= 2
-            #update_api_data_file(global_state.player_data)
-            
-            """if killer in global_state.player_newdat:
-              if victim in global_state.player_newdat:
-                yap(killer + ", " + victim)
-                
-                ran_command = True
-                export_cfg("inline")
-                
-              else:
-                yap("v unregistered error killtracker What?")
-                #yap("v can't use kill tracker for " + victim + ", they aren't registered")
-                
-                #ran_command = True
-                #export_cfg("inline")
-                
-            else:
-              yap("k unregistered error killtracker")
-              #yap("k can't use kill tracker for " + killer + ", they aren't registered")
+              global_state.player_newdat[victim].deaths += 1
+              global_state.player_newdat[victim].tokens -= 2
               
-              #ran_command = True
-              #export_cfg("inline")"""
-            
-            
-            
-    time.sleep(1)
+              update_database(global_state)
+              
+      time.sleep(1)
 
-    
-    #time.sleep(1)
-    #clear cfg file
-    if ran_command:
-      cfg = []
-      export_cfg("inline")
-      ran_command = False
-      print("previously executed command has been cleared")
-    
+      #clear cfg file
+      if ran_command:
+        cfg = []
+        export_cfg("inline")
+        ran_command = False
+        print("previously executed command has been cleared")
+      
+      time.sleep(2)
+      
+  #OSError
+  except Exception as e:
+    cfg = []
+    yap("failure in main command loop: {}".format(e)) # crash message
+    export_cfg("inline")
+    print(e)
     time.sleep(2)
+    cfg = []
+    export_cfg("inline")
+
+def run_in_command_line(global_state):
+  global cfg
+  admin = global_state.config["system"]["admin"]
+  
+  while True:
+    last_line = (GUD_API_CONSOLE_USER + " :  " + input("Say :"))[:256]
+    print(last_line)
+    time.sleep(1)
+    #autobabble search
+    for phrase in global_state.autobabbles.keys():
+      if phrase.lower() in last_line.lower():
+        response = global_state.autobabbles[phrase]
+        last_line_formatted = last_line.replace(phrase, "{phrase}")
+        response = response.replace("{src}", last_line_formatted)
+          
+        yap(response)
+          
+        export_cfg("cfg")
+    
+    #chat commands
+    split_message = last_line.split(':')
+    
+    if len(split_message) >= 2:
+      message = split_message[1][2:] #chop off leading space
+      
+      args = []
+      is_reading_string = False
+      cur_string = ""
+      prev_char = 'jb55'
+      is_escaped = False
+      #pedophile code
+      for i in range(len(message)):
+        char = message[i]
         
-#OSError
-except OSError as e:
+        if is_reading_string:
+        # or "'"
+          if char == '"':
+            if prev_char == '\\':
+              cur_string += char
+            else:
+              is_reading_string = False
+              args.append(cur_string)
+              cur_string = ""
+          elif char == '\\':
+            pass
+          else:
+            cur_string += char
+        else:
+          if char == ' ':
+            args.append(cur_string)
+            cur_string = ""
+          elif char == '"':
+            is_reading_string = True
+            cur_string = ""
+          else:
+            cur_string += char
+        
+          if i == len(message) - 1:
+            args.append(cur_string)
+        
+        prev_char = char
+      
+      if len(args) > 0: command_name = args[0].lower()
+      author = split_message[0][:-1] #chop off trailing space
+      
+      if command_name in global_state.commands:
+        command = global_state.commands[command_name]
+        args = args[1:] #cut off the command part of the arguments
+        
+        if command.is_restricted:
+          if author == admin or GUD_API_STUPID_IGNORE_ADMIN:
+            command.execute(author, args, global_state)
+            export_cfg("inline")
+            
+          else:
+            yap("This command is restricted.")
+            export_cfg("inline")
+          
+        else:
+          command.execute(author, args, global_state)
+          export_cfg("inline")
+          
+      elif len(command_name) > 1:
+        if command_name[0] == '$':
+          
+          yap("Unknown command '{}.' Type $help for command list.".format(message))
+          
+          export_cfg("inline") 
+    
+    else:
+      #kill tracker goes here
+      pass
+
+    #clear cfg file
+    cfg = []
+
+def main():
+  global use_command_line
+  global cfg
+  
+  global_state = GlobalState()
+
+  #parse_api_data(global_state)
+  try:
+    config_file = open("config.pydn", "r", encoding="utf-8")
+    global_state.config = pydn.decode(config_file.read())
+    config_file.close()
+    
+    use_command_line = global_state.config["system"]["use_command_line"]
+    
+  except FileNotFoundError:
+    yap("[ERROR] Could not find 'config.pydn'. Are you sure it's in the same folder as 'gud_api.py'?")
+    export_cfg("inline")
+    time.sleep(1)
+    cfg = []
+    export_cfg("inline")
+    sys.exit(1)
+
+  try:
+    data_file = open(GUD_API_DATA_PATH, "r", encoding="utf-8")
+    player_data_raw = pydn.decode(data_file.read())["player_data"]
+    data_file.close()
+    #TODO: use player ID instead of name for this
+    for player_name in player_data_raw:
+      player_raw = player_data_raw[player_name]
+      global_state.player_newdat[player_name] = Player("n/a", player_raw[0], player_raw[1], player_raw[2], player_raw[3])
+    
+  except FileNotFoundError:
+    #TODO: this should get created automatically
+    yap("[ERROR] Could not find 'database.pydn'. Are you sure it's in the same folder as 'gud_api.py'?")
+    export_cfg("inline")
+    time.sleep(1)
+    cfg = []
+    export_cfg("inline")
+    sys.exit(1)
+    
+  admin = global_state.config["system"]["admin"]
+  print("current admin is: {}".format(admin))
+
+  collected_words = []
+  duplicate_words = ""
+
+  for word in global_state.god.words:
+    if word in collected_words:
+      duplicate_words += word
+      duplicate_words += ' '
+    else:
+      collected_words.append(word)
+
+  if duplicate_words != "":
+    yap("[INFO] Fail in script--duplicate god words: " + duplicate_words)
+  else:
+    #yap("[INFO] gud_api is online. Type '$help' for a list of commands.")
+    #yap("[INFO] Playerdata is being rewritten, it will not save. Type '$help' for a list of commands.")
+    yap(global_state.config["system"]["start_message"])
+    
+    """for message in global_state.config["autoexec"]:
+      #parse message
+      args = []
+      is_reading_string = False
+      cur_string = ""
+      prev_char = 'jb55'
+      is_escaped = False
+        
+      for i in range(len(message)):
+        char = message[i]
+        
+        if is_reading_string:
+        # or "'"
+          if char == '"':
+            if prev_char == '\\':
+              cur_string += char
+            else:
+              is_reading_string = False
+              args.append(cur_string)
+              cur_string = ""
+          elif char == '\\':
+            pass
+          else:
+            cur_string += char
+        else:
+          if char == ' ':
+            args.append(cur_string)
+            cur_string = ""
+          elif char == '"':
+            is_reading_string = True
+            cur_string = ""
+          else:
+            cur_string += char
+        
+          if i == len(message) - 1:
+            args.append(cur_string)
+        
+        prev_char = char
+        
+      command_name = args[0]
+      #chop off command name
+      args = args[1:]
+        
+      if command_name in global_state.commands:
+        command = global_state.commands[command_name]
+          
+        command.execute(admin, args, global_state)
+      else:
+        yap("[ERROR] Unknown command '" + command_name + "' in autoexec.")
+        export_cfg("inline")
+        time.sleep(1)
+        cfg = []
+        export_cfg("inline")
+        sys.exit(1)
+        
+  for i in range(GUD_API_RECENT_LINES_MAX):
+    cmd("echo padding {}".format(i))"""
+
+  export_cfg("cfg")
+  print("autoexec has been executed")
+  time.sleep(1)
   cfg = []
-  yap("failure in main command loop: {}".format(e)) # crash message
   export_cfg("inline")
-  print(e)
-  time.sleep(2)
-  cfg = []
-  export_cfg("inline")
+  print("starting text has been cleared")
+
+  if use_command_line:
+    run_in_command_line(global_state)
+    
+  else:
+    run_in_source(global_state)
+    
+if __name__ == "__main__":
+  main()
